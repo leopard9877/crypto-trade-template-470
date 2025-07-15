@@ -8,6 +8,7 @@ import { GovernmentHeader } from "@/components/layout/GovernmentHeader";
 import { MainHeader } from "@/components/layout/MainHeader";
 import { ContentRenderer } from "@/components/layout/ContentRenderer";
 import { SecurityProvider } from "@/components/security/SecurityProvider";
+import { log } from "@/utils/logger";
 
 const VALID_SECTIONS = new Set([
   "dashboard", "legal-catalog", "legal-enrichment", "legal-search",
@@ -38,7 +39,7 @@ const Index = () => {
 
   // Navigation with browser history
   const handleSectionChange = useCallback((newSection: string) => {
-    console.log('Attempting to navigate to section:', newSection);
+    log.debug('Attempting to navigate to section', { section: newSection });
     if (VALID_SECTIONS.has(newSection)) {
       setActiveSection(newSection);
       if (newSection === "dashboard") {
@@ -46,15 +47,15 @@ const Index = () => {
       } else {
         navigate(`/${newSection}`, { replace: false });
       }
-      console.log('Successfully navigated to section:', newSection);
+      log.info('Successfully navigated to section', { section: newSection });
     } else {
-      console.warn(`Section invalide tentée: ${newSection}`);
+      log.warn(`Invalid section attempted: ${newSection}`, { section: newSection });
     }
   }, [navigate]);
 
   useEffect(() => {
     const handleNavigateToSection = (event: CustomEvent) => {
-      console.log('Navigation event received:', event.detail);
+      log.debug('Navigation event received', { detail: event.detail });
       const targetSection = event.detail;
       
       if (typeof targetSection === 'string' && VALID_SECTIONS.has(targetSection)) {
@@ -75,7 +76,7 @@ const Index = () => {
           }
         }, 1000);
       } else {
-        console.warn(`Section invalide reçue via événement: ${targetSection}`);
+        log.warn(`Invalid section received via event: ${targetSection}`, { section: targetSection });
       }
     };
 

@@ -94,7 +94,7 @@ export function SpecializedNLP() {
     // Patterns améliorés pour l'extraction d'entités juridiques
     const patterns = [
       {
-        regex: /\b(M\.|Mme|Monsieur|Madame|Me|Maître)\s+([A-Z][a-zA-Z\s\-]+?)(?=\s|,|\.|\()/g,
+        regex: /\b(M\.|Mme|Monsieur|Madame|Me|Maître)\s+([A-Z][a-zA-Z\s-]+?)(?=\s|,|\.|\()/g,
         type: 'person' as const,
         metadata: (match: string) => ({ role: match.includes('Me') || match.includes('Maître') ? 'avocat' : 'partie' })
       },
