@@ -392,7 +392,7 @@ class UnifiedCacheManager<T = any> {
   }
 
   private logCacheOperation(operation: string, key: string, details: any): void {
-    console.debug(`Cache ${operation}:`, { key, ...details, timestamp: Date.now() });
+    // Debug logging removed for production
   }
 
   private startBackgroundTasks(): void {
