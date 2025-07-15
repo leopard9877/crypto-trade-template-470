@@ -23,7 +23,7 @@ import {
 interface ApiImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  context: 'legal-texts' | 'procedures';
+  context: 'legal-texts' | 'procedures' | 'news' | 'library';
 }
 
 export function ApiImportModal({ isOpen, onClose, context }: ApiImportModalProps) {

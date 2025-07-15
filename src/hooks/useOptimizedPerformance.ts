@@ -38,7 +38,7 @@ export function useOptimizedPerformance(
       
       lastRenderTimeRef.current = now;
     }
-  });
+  }, [componentName, enableRenderTracking]);
 
   // Monitoring mémoire
   const checkMemoryUsage = useCallback(() => {

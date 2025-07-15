@@ -81,16 +81,6 @@ export function VoiceSearchInput({
     return contextSuggestions[context] || contextSuggestions.general;
   };
 
-  // Stable callback to avoid infinite loops
-  const handleVoiceResult = useCallback((text: string) => {
-    if (onChange) {
-      onChange(text);
-    }
-    if (onVoiceResult) {
-      onVoiceResult(text);
-    }
-  }, [onChange, onVoiceResult]);
-
   useEffect(() => {
     if (!showVoiceButton) return;
 
@@ -108,7 +98,12 @@ export function VoiceSearchInput({
       recognition.onresult = (event: any) => {
         const transcript = event.results[0]?.transcript;
         if (transcript) {
-          handleVoiceResult(transcript);
+          if (onChange) {
+            onChange(transcript);
+          }
+          if (onVoiceResult) {
+            onVoiceResult(transcript);
+          }
         }
         setIsListening(false);
       };
@@ -137,7 +132,7 @@ export function VoiceSearchInput({
         recognitionRef.current.abort();
       }
     };
-  }, [handleVoiceResult, toast, showVoiceButton]);
+  }, [toast, showVoiceButton]); // Removed onChange and onVoiceResult to prevent infinite loops
 
   // Filtrer les suggestions
   useEffect(() => {

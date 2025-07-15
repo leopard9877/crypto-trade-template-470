@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { securityMonitor } from '@/utils/unifiedSecurity';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, AlertTriangle } from 'lucide-react';
@@ -18,7 +18,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
   const [threats, setThreats] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
 
-  const reportThreat = (threat: string, details: any) => {
+  const reportThreat = useCallback((threat: string, details: any) => {
     securityMonitor.logSecurityEvent(threat, details);
     setThreats(prev => prev + 1);
     
@@ -26,7 +26,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       setSecurityLevel('high');
       setShowAlert(true);
     }
-  };
+  }, [threats]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,12 +46,12 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  const value: SecurityContextType = {
+  const value: SecurityContextType = useMemo(() => ({
     securityLevel,
     threats,
     isSecure: securityLevel !== 'high',
     reportThreat
-  };
+  }), [securityLevel, threats, reportThreat]);
 
   return (
     <SecurityContext.Provider value={value}>

@@ -1,8 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { performanceMonitor } from '@/utils/performanceMonitor';
+import { cacheManager } from '@/utils/cacheManager';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Activity, Zap } from 'lucide-react';
+import { useOptimizedPerformance } from '@/hooks/useOptimizedPerformance';
 
 interface PerformanceStats {
   loadTime: number;
@@ -11,7 +13,20 @@ interface PerformanceStats {
   slowOperations: number;
 }
 
-export function PerformanceOptimizer({ children }: { children: React.ReactNode }) {
+interface PerformanceOptimizerProps {
+  children: React.ReactNode;
+  enableMonitoring?: boolean;
+  optimizeImages?: boolean;
+  enableCaching?: boolean;
+}
+
+export function PerformanceOptimizer({ 
+  children, 
+  enableMonitoring = true,
+  optimizeImages = true,
+  enableCaching = true 
+}: PerformanceOptimizerProps) {
+  const { recordCustomMetric } = useOptimizedPerformance('PerformanceOptimizer');
   const [stats, setStats] = useState<PerformanceStats>({
     loadTime: 0,
     memoryUsage: 0,
@@ -20,8 +35,44 @@ export function PerformanceOptimizer({ children }: { children: React.ReactNode }
   });
   
   const [showAlert, setShowAlert] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
+  // Hydration check
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Image optimization
+  const optimizeImageLoading = useCallback(() => {
+    if (!optimizeImages || !isClient) return;
+
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const img = entry.target as HTMLImageElement;
+          const src = img.getAttribute('data-src');
+          if (src) {
+            img.src = src;
+            img.removeAttribute('data-src');
+            imageObserver.unobserve(img);
+          }
+        }
+      });
+    });
+
+    images.forEach((img) => imageObserver.observe(img));
+
+    return () => {
+      images.forEach((img) => imageObserver.unobserve(img));
+    };
+  }, [optimizeImages, isClient]);
+
+  // Performance monitoring
+  useEffect(() => {
+    if (!enableMonitoring || !isClient) return;
+
+    const startTime = performance.now();
     const interval = setInterval(() => {
       const report = performanceMonitor.getPerformanceReport();
       const newStats = {
@@ -39,8 +90,54 @@ export function PerformanceOptimizer({ children }: { children: React.ReactNode }
       }
     }, 30000);
 
+    // Monitor long tasks
+    const longTaskObserver = new PerformanceObserver((list) => {
+      list.getEntries().forEach((entry) => {
+        if (entry.duration > 50) {
+          recordCustomMetric('long_task', entry.duration, 'interaction');
+        }
+      });
+    });
+
+    try {
+      longTaskObserver.observe({ entryTypes: ['longtask'] });
+    } catch (e) {
+      console.warn('Performance observers not supported');
+    }
+
+    return () => {
+      clearInterval(interval);
+      longTaskObserver.disconnect();
+      
+      const endTime = performance.now();
+      recordCustomMetric('component_lifetime', endTime - startTime, 'rendering');
+    };
+  }, [enableMonitoring, isClient, recordCustomMetric]);
+
+  // Image loading optimization
+  useEffect(() => {
+    const cleanup = optimizeImageLoading();
+    return cleanup;
+  }, [optimizeImageLoading]);
+
+  // Memory cleanup
+  useEffect(() => {
+    const cleanup = () => {
+      if (enableCaching) {
+        cacheManager.cleanup();
+      }
+    };
+
+    const interval = setInterval(cleanup, 2 * 60 * 1000); // Every 2 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [enableCaching]);
+
+  // Memoized children to prevent unnecessary re-renders
+  const memoizedChildren = useMemo(() => children, [children]);
+
+  if (!isClient) {
+    return <>{children}</>;
+  }
 
   return (
     <>
@@ -69,7 +166,20 @@ export function PerformanceOptimizer({ children }: { children: React.ReactNode }
         </div>
       </div>
       
-      {children}
+      {memoizedChildren}
     </>
   );
+}
+
+// HOC for performance optimization
+export function withPerformanceOptimization<P extends object>(
+  Component: React.ComponentType<P>
+) {
+  return React.memo((props: P) => {
+    return (
+      <PerformanceOptimizer>
+        <Component {...props} />
+      </PerformanceOptimizer>
+    );
+  });
 }
